@@ -1,0 +1,7 @@
+interface:
+  display_name: "MOSEK Modeling"
+  short_description: "Build MOSEK Fusion optimization models"
+  default_prompt: "Use $mosek-modeling to formulate and implement a MOSEK Fusion optimization model."
+
+policy:
+  allow_implicit_invocation: true
