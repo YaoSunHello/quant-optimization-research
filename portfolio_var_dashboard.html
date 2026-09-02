@@ -961,9 +961,8 @@
         const varCtx = document.getElementById('chart-var-relationship');
         if (varCtx) {
             new Chart(varCtx, {
-                type: 'line',
+                type: 'scatter',
                 data: {
-                    labels: ['0%', '5%', '10%', '15%', '20%', '30%'],
                     datasets: [
                         {
                             label: 'Aggressive (80% Stocks) | VaR: -5.84%',
@@ -976,15 +975,15 @@
                                 {x: 71.5, y: -5.84}
                             ],
                             borderColor: 'rgb(211, 47, 47)',
-                            backgroundColor: 'rgba(211, 47, 47, 0.1)',
-                            borderWidth: 2.5,
-                            tension: 0.4,
-                            fill: false,
+                            backgroundColor: 'rgba(211, 47, 47, 0.7)',
+                            borderWidth: 3,
                             pointRadius: 8,
-                            pointBackgroundColor: 'rgb(211, 47, 47)',
                             pointBorderColor: 'rgb(211, 47, 47)',
                             pointBorderWidth: 2,
                             pointHoverRadius: 10,
+                            showLine: true,
+                            fill: false,
+                            tension: 0.1,
                         },
                         {
                             label: 'Balanced (60% Stocks) | VaR: -1.50%',
@@ -997,15 +996,15 @@
                                 {x: 70.7, y: -1.50}
                             ],
                             borderColor: 'rgb(245, 124, 0)',
-                            backgroundColor: 'rgba(245, 124, 0, 0.1)',
-                            borderWidth: 2.5,
-                            tension: 0.4,
-                            fill: false,
+                            backgroundColor: 'rgba(245, 124, 0, 0.7)',
+                            borderWidth: 3,
                             pointRadius: 8,
-                            pointBackgroundColor: 'rgb(245, 124, 0)',
                             pointBorderColor: 'rgb(245, 124, 0)',
                             pointBorderWidth: 2,
                             pointHoverRadius: 10,
+                            showLine: true,
+                            fill: false,
+                            tension: 0.1,
                         },
                         {
                             label: 'Conservative (40% Stocks) | VaR: +1.68%',
@@ -1018,15 +1017,15 @@
                                 {x: 67.5, y: 1.68}
                             ],
                             borderColor: 'rgb(56, 142, 60)',
-                            backgroundColor: 'rgba(56, 142, 60, 0.1)',
-                            borderWidth: 2.5,
-                            tension: 0.4,
-                            fill: false,
+                            backgroundColor: 'rgba(56, 142, 60, 0.7)',
+                            borderWidth: 3,
                             pointRadius: 8,
-                            pointBackgroundColor: 'rgb(56, 142, 60)',
                             pointBorderColor: 'rgb(56, 142, 60)',
                             pointBorderWidth: 2,
                             pointHoverRadius: 10,
+                            showLine: true,
+                            fill: false,
+                            tension: 0.1,
                         }
                     ]
                 },
@@ -1043,13 +1042,14 @@
                                 label: function(context) {
                                     const prob = context.parsed.x.toFixed(1);
                                     const var_val = context.parsed.y.toFixed(2);
-                                    return `P(Return exceeds target) = ${prob}% | VaR = ${var_val}%`;
+                                    return `Probability: ${prob}% | VaR: ${var_val}%`;
                                 }
                             }
                         }
                     },
                     scales: {
                         x: {
+                            type: 'linear',
                             min: 65,
                             max: 100,
                             ticks: {
@@ -1058,7 +1058,7 @@
                             },
                             title: {
                                 display: true,
-                                text: 'Probability of Exceeding Return Target (Cumulative 5-Year)',
+                                text: 'Probability of Exceeding Return Target (Cumulative 5-Year %)',
                                 font: {
                                     size: 14,
                                     weight: 600
@@ -1066,12 +1066,13 @@
                             }
                         },
                         y: {
+                            type: 'linear',
                             ticks: {
                                 callback: v => v + '%'
                             },
                             title: {
                                 display: true,
-                                text: 'Annualized VaR at 95% Confidence',
+                                text: 'Annualized VaR at 95% Confidence (%)',
                                 font: {
                                     size: 14,
                                     weight: 600
