@@ -267,13 +267,22 @@
         }
 
         .insights-box {
-            background: var(--color-primary-dark);
-            border-left: 3px solid var(--color-text-primary);
+            background: #f0f4f8;
+            border-left: 3px solid #1a73e8;
             padding: 16px;
             margin-top: 16px;
             border-radius: 4px;
             font-size: 13px;
             line-height: 1.7;
+            color: #1a1a1a;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .insights-box {
+                background: #1e293b;
+                border-left: 3px solid #60a5fa;
+                color: #e2e8f0;
+            }
         }
 
         .insights-box strong {
