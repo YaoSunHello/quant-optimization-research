@@ -533,25 +533,25 @@
             </div>
         </div>
 
-        <!-- Key Relationship: Probability vs Return Thresholds -->
+        <!-- Key Relationship: VaR vs Probability of Return Thresholds -->
         <div class="card relationship-chart">
-            <h2>📊 Core Relationship: Probability of Exceeding Return Targets vs VaR</h2>
+            <h2>📊 Core Relationship: VaR (95%) vs Probability of Exceeding Return Targets</h2>
             <p style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 12px;">
-                <strong>X-axis:</strong> Probability of exceeding return threshold | <strong>Y-axis:</strong> Return threshold
+                <strong>X-axis:</strong> Probability of exceeding return target (cumulative 5-year) | <strong>Y-axis:</strong> Annualized VaR at 95% confidence
             </p>
             <div class="chart-container" style="height: 350px;">
                 <canvas id="chart-var-relationship"></canvas>
             </div>
             <div class="insights-box">
-                <strong>Key Insight:</strong> Each dot represents a simulated outcome: the probability of achieving a specific return target for a given portfolio. Reading the chart:
-                <br>
-                • <strong>Conservative (green):</strong> 96.8% chance of 0% return, 67.5% chance of 30% return
-                <br>
-                • <strong>Balanced (orange):</strong> 93.6% chance of 0% return, 70.7% chance of 30% return
-                <br>
-                • <strong>Aggressive (red):</strong> 90.0% chance of 0% return, 71.5% chance of 30% return
+                <strong>Key Insight:</strong> This chart reveals the fundamental relationship between VaR and return probabilities. Each horizontal line represents a portfolio at its fixed VaR level, with dots showing how probability changes across different return thresholds:
                 <br><br>
-                The relationship follows the normal CDF: P(R > X) = 1 - Φ((X - μ) / σ). Higher expected returns shift probabilities up and right; lower volatility steepens the decline. The 50,000 Monte Carlo simulations validate this theoretical relationship empirically.
+                • <strong>Conservative (green line at +1.68%):</strong> Highest probabilities across all thresholds (96.8% at 0%, 67.5% at 30%)
+                <br>
+                • <strong>Balanced (orange line at -1.50%):</strong> Middle probabilities (93.6% at 0%, 70.7% at 30%)
+                <br>
+                • <strong>Aggressive (red line at -5.84%):</strong> Lower probabilities but higher expected returns (90.0% at 0%, 71.5% at 30%)
+                <br><br>
+                <strong>The mathematical relationship:</strong> As probability increases (moving right on X-axis), we're measuring the chance of exceeding lower return targets. All three portfolios follow P(R > threshold) = 1 - Φ((threshold - μ) / σ), where higher VaR (less negative) indicates lower baseline risk, but higher expected returns partially offset this difference in probabilities.
             </div>
         </div>
 
@@ -957,78 +957,76 @@
             });
         });
 
-        // Create VaR vs Return Probability chart (SWAPPED AXES)
+        // Create VaR vs Return Probability chart
         const varCtx = document.getElementById('chart-var-relationship');
         if (varCtx) {
             new Chart(varCtx, {
-                type: 'scatter',
+                type: 'line',
                 data: {
+                    labels: ['0%', '5%', '10%', '15%', '20%', '30%'],
                     datasets: [
                         {
-                            label: 'Aggressive (80% Stocks)',
+                            label: 'Aggressive (80% Stocks) | VaR: -5.84%',
                             data: [
-                                {x: 90.0, y: 0},
-                                {x: 87.5, y: 5},
-                                {x: 84.6, y: 10},
-                                {x: 81.6, y: 15},
-                                {x: 78.3, y: 20},
-                                {x: 71.5, y: 30}
+                                {x: 90.0, y: -5.84},
+                                {x: 87.5, y: -5.84},
+                                {x: 84.6, y: -5.84},
+                                {x: 81.6, y: -5.84},
+                                {x: 78.3, y: -5.84},
+                                {x: 71.5, y: -5.84}
                             ],
                             borderColor: 'rgb(211, 47, 47)',
-                            backgroundColor: 'rgba(211, 47, 47, 0.6)',
+                            backgroundColor: 'rgba(211, 47, 47, 0.1)',
                             borderWidth: 2.5,
+                            tension: 0.4,
+                            fill: false,
                             pointRadius: 8,
-                            pointHoverRadius: 10,
+                            pointBackgroundColor: 'rgb(211, 47, 47)',
                             pointBorderColor: 'rgb(211, 47, 47)',
                             pointBorderWidth: 2,
-                            showLine: true,
-                            borderDash: [0],
-                            fill: false,
-                            tension: 0.4,
+                            pointHoverRadius: 10,
                         },
                         {
-                            label: 'Balanced (60% Stocks)',
+                            label: 'Balanced (60% Stocks) | VaR: -1.50%',
                             data: [
-                                {x: 93.6, y: 0},
-                                {x: 91.0, y: 5},
-                                {x: 87.9, y: 10},
-                                {x: 84.2, y: 15},
-                                {x: 80.0, y: 20},
-                                {x: 70.7, y: 30}
+                                {x: 93.6, y: -1.50},
+                                {x: 91.0, y: -1.50},
+                                {x: 87.9, y: -1.50},
+                                {x: 84.2, y: -1.50},
+                                {x: 80.0, y: -1.50},
+                                {x: 70.7, y: -1.50}
                             ],
                             borderColor: 'rgb(245, 124, 0)',
-                            backgroundColor: 'rgba(245, 124, 0, 0.6)',
+                            backgroundColor: 'rgba(245, 124, 0, 0.1)',
                             borderWidth: 2.5,
+                            tension: 0.4,
+                            fill: false,
                             pointRadius: 8,
-                            pointHoverRadius: 10,
+                            pointBackgroundColor: 'rgb(245, 124, 0)',
                             pointBorderColor: 'rgb(245, 124, 0)',
                             pointBorderWidth: 2,
-                            showLine: true,
-                            borderDash: [0],
-                            fill: false,
-                            tension: 0.4,
+                            pointHoverRadius: 10,
                         },
                         {
-                            label: 'Conservative (40% Stocks)',
+                            label: 'Conservative (40% Stocks) | VaR: +1.68%',
                             data: [
-                                {x: 96.8, y: 0},
-                                {x: 94.3, y: 5},
-                                {x: 90.9, y: 10},
-                                {x: 86.4, y: 15},
-                                {x: 80.9, y: 20},
-                                {x: 67.5, y: 30}
+                                {x: 96.8, y: 1.68},
+                                {x: 94.3, y: 1.68},
+                                {x: 90.9, y: 1.68},
+                                {x: 86.4, y: 1.68},
+                                {x: 80.9, y: 1.68},
+                                {x: 67.5, y: 1.68}
                             ],
                             borderColor: 'rgb(56, 142, 60)',
-                            backgroundColor: 'rgba(56, 142, 60, 0.6)',
+                            backgroundColor: 'rgba(56, 142, 60, 0.1)',
                             borderWidth: 2.5,
+                            tension: 0.4,
+                            fill: false,
                             pointRadius: 8,
-                            pointHoverRadius: 10,
+                            pointBackgroundColor: 'rgb(56, 142, 60)',
                             pointBorderColor: 'rgb(56, 142, 60)',
                             pointBorderWidth: 2,
-                            showLine: true,
-                            borderDash: [0],
-                            fill: false,
-                            tension: 0.4,
+                            pointHoverRadius: 10,
                         }
                     ]
                 },
@@ -1044,8 +1042,8 @@
                             callbacks: {
                                 label: function(context) {
                                     const prob = context.parsed.x.toFixed(1);
-                                    const threshold = context.parsed.y.toFixed(0);
-                                    return `P(Return > ${threshold}%) = ${prob}%`;
+                                    const var_val = context.parsed.y.toFixed(2);
+                                    return `P(Return exceeds target) = ${prob}% | VaR = ${var_val}%`;
                                 }
                             }
                         }
@@ -1060,7 +1058,7 @@
                             },
                             title: {
                                 display: true,
-                                text: 'Probability of Exceeding Return Target (%)',
+                                text: 'Probability of Exceeding Return Target (Cumulative 5-Year)',
                                 font: {
                                     size: 14,
                                     weight: 600
@@ -1069,12 +1067,11 @@
                         },
                         y: {
                             ticks: {
-                                callback: v => v + '%',
-                                stepSize: 5
+                                callback: v => v + '%'
                             },
                             title: {
                                 display: true,
-                                text: 'Return Threshold (5-Year Cumulative %)',
+                                text: 'Annualized VaR at 95% Confidence',
                                 font: {
                                     size: 14,
                                     weight: 600
