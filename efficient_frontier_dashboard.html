@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Efficient Frontier: VaR vs Cumulative Probability</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-surface: #ffffff;
+            --color-text-primary: #1a1a1a;
+            --color-text-secondary: #666666;
+            --color-border: #e0e0e0;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-surface: #1a1a1a;
+                --color-text-primary: #f5f5f5;
+                --color-text-secondary: #b0b0b0;
+                --color-border: #333333;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--color-surface);
+            color: var(--color-text-primary);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            color: var(--color-text-secondary);
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .header .description {
+            color: var(--color-text-secondary);
+            font-size: 13px;
+            max-width: 900px;
+            line-height: 1.7;
+        }
+
+        .card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--color-text-primary);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 550px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            padding: 16px;
+            background: var(--color-border);
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .legend-dot.aggressive {
+            background: #d32f2f;
+        }
+
+        .legend-dot.balanced {
+            background: #f57c00;
+        }
+
+        .legend-dot.conservative {
+            background: #388e3c;
+        }
+
+        .legend-dot.random {
+            background: #90a4ae;
+        }
+
+        .insights-box {
+            background: #f0f4f8;
+            border-left: 3px solid #1a73e8;
+            padding: 16px;
+            margin-top: 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #1a1a1a;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .insights-box {
+                background: #1e293b;
+                border-left: 3px solid #60a5fa;
+                color: #e2e8f0;
+            }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: var(--color-border);
+            padding: 16px;
+            border-radius: 6px;
+        }
+
+        .stat-card .label {
+            font-size: 11px;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .stat-card .value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--color-text-primary);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 16px;
+        }
+
+        th, td {
+            padding: 10px 8px;
+            text-align: right;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        td:first-child, th:first-child {
+            text-align: left;
+        }
+
+        tr:hover {
+            background: var(--color-border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Efficient Frontier: VaR vs Cumulative Probability</h1>
+            <div class="subtitle">2,000 random portfolios + 3 standard allocations</div>
+            <div class="description">
+                This visualization reveals the efficient frontier in a new coordinate system. Instead of Risk vs Return (traditional),
+                we show <strong>Annualized VaR (downside risk)</strong> vs <strong>Cumulative Probability (average likelihood of beating multiple return targets)</strong>.
+                Each dot represents one portfolio. The color gradient (red → green) indicates how likely the portfolio is to achieve its targets.
+                The three standard portfolios (Aggressive, Balanced, Conservative) are highlighted with larger markers, revealing their position on the frontier.
+            </div>
+        </div>
+
+        <!-- Main Frontier Chart -->
+        <div class="card">
+            <h2>Efficient Frontier: 2,000 Simulated Portfolios</h2>
+            <div class="chart-container">
+                <canvas id="frontier-chart"></canvas>
+            </div>
+
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot random"></div>
+                    <span>Random Portfolios (n=2000)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot conservative"></div>
+                    <span>Conservative (40% stocks)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot balanced"></div>
+                    <span>Balanced (60% stocks)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot aggressive"></div>
+                    <span>Aggressive (80% stocks)</span>
+                </div>
+            </div>
+
+            <div class="insights-box">
+                <strong>📌 How to Read This Chart:</strong><br><br>
+                • <strong>X-axis (Cumulative Probability):</strong> Average probability of beating return targets (0%, 5%, 10%, ... 30%). Higher = better odds across all thresholds.<br>
+                • <strong>Y-axis (Annualized VaR):</strong> Worst expected return at 95% confidence, annualized. Higher (less negative) = safer downside.<br>
+                • <strong>Color Gradient:</strong> Red (60-75% probability) → Orange → Yellow → Light Green → Dark Green (90%+ probability)<br>
+                • <strong>Efficient Frontier:</strong> The upper-right boundary—portfolios that maximize probability for each VaR level.<br>
+                • <strong>Key Insight:</strong> You cannot arbitrarily increase probability without accepting higher (less negative) VaR, just like you can't maximize return without taking risk.
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="grid-2">
+            <div class="card">
+                <h2>📈 Frontier Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">VaR Range (Annualized)</div>
+                        <div class="value" id="var-range">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Probability Range</div>
+                        <div class="value" id="prob-range">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Expected Return Range</div>
+                        <div class="value" id="return-range">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Volatility Range</div>
+                        <div class="value" id="vol-range">-</div>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 14px; margin-top: 24px; margin-bottom: 12px;">Pareto Optimal Portfolios</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Portfolio Type</th>
+                            <th>VaR (Annual)</th>
+                            <th>Avg Probability</th>
+                            <th>Expected Return</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stats-table">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>💡 Key Takeaways</h2>
+                <div style="font-size: 13px; line-height: 2;">
+                    <p><strong>1. The Frontier Slope:</strong></p>
+                    <p style="margin-left: 16px; color: var(--color-text-secondary);">
+                        The efficient frontier is positively sloped: higher probability requires higher (less negative) VaR.
+                        This reflects the risk-return trade-off in new coordinates.
+                    </p>
+
+                    <p style="margin-top: 16px;"><strong>2. Red vs Green Dots:</strong></p>
+                    <p style="margin-left: 16px; color: var(--color-text-secondary);">
+                        Red dots (60-75% probability) are bond-heavy portfolios with high VaR but limited upside.
+                        Green dots (85%+ probability) are balanced/aggressive with good return odds.
+                    </p>
+
+                    <p style="margin-top: 16px;"><strong>3. Standard Portfolios:</strong></p>
+                    <p style="margin-left: 16px; color: var(--color-text-secondary);">
+                        Conservative sits far right (safest).
+                        Balanced is near the knee of the frontier (optimal risk-adjusted).
+                        Aggressive is left (highest probability of exceptional returns).
+                    </p>
+
+                    <p style="margin-top: 16px;"><strong>4. No Dominance:</strong></p>
+                    <p style="margin-left: 16px; color: var(--color-text-secondary);">
+                        No single portfolio dominates all others. The "best" depends on your risk tolerance and goals.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Threshold Analysis -->
+        <div class="card">
+            <h2>🎯 Return Threshold Analysis</h2>
+            <p style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 16px;">
+                How does probability decay as return targets increase? Below shows the 3 standard portfolios:
+            </p>
+            <div class="chart-container" style="height: 350px;">
+                <canvas id="threshold-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load frontier data
+        fetch('efficient_frontier_data.json')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Loaded frontier data:', data.portfolios.length, 'portfolios');
+                visualizeFrontier(data);
+            })
+            .catch(err => console.error('Error loading data:', err));
+
+        function visualizeFrontier(data) {
+            const portfolios = data.portfolios;
+            const colors = data.colors;
+
+            // Separate standard and random portfolios
+            const randomPortfolios = portfolios.filter((p, i) => !p.is_standard);
+            const standardPortfolios = portfolios.filter(p => p.is_standard);
+
+            // Extract statistics
+            const allVaR = portfolios.map(p => p.var_95_annual);
+            const allProb = portfolios.map(p => p.avg_probability);
+            const allReturn = portfolios.map(p => p.expected_return);
+            const allVol = portfolios.map(p => p.volatility);
+
+            // Update statistics
+            document.getElementById('var-range').textContent =
+                `${Math.min(...allVaR).toFixed(2)}% to ${Math.max(...allVaR).toFixed(2)}%`;
+            document.getElementById('prob-range').textContent =
+                `${Math.min(...allProb).toFixed(1)}% to ${Math.max(...allProb).toFixed(1)}%`;
+            document.getElementById('return-range').textContent =
+                `${Math.min(...allReturn).toFixed(2)}% to ${Math.max(...allReturn).toFixed(2)}%`;
+            document.getElementById('vol-range').textContent =
+                `${Math.min(...allVol).toFixed(2)}% to ${Math.max(...allVol).toFixed(2)}%`;
+
+            // Create frontier chart
+            const ctx = document.getElementById('frontier-chart').getContext('2d');
+
+            // Prepare random portfolio data
+            const randomData = randomPortfolios.map((p, i) => ({
+                x: p.avg_probability,
+                y: p.var_95_annual,
+                portfolio: p
+            }));
+
+            // Prepare standard portfolio data with markers
+            const standardData = {
+                aggressive: standardPortfolios.find(p => p.marker_type === 'aggressive'),
+                balanced: standardPortfolios.find(p => p.marker_type === 'balanced'),
+                conservative: standardPortfolios.find(p => p.marker_type === 'conservative')
+            };
+
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        // Random portfolios
+                        {
+                            label: 'Random Portfolios (n=2000)',
+                            data: randomData.map(d => ({x: d.x, y: d.y})),
+                            backgroundColor: randomData.map((d, i) => colors[i]),
+                            borderColor: randomData.map((d, i) => colors[i]),
+                            borderWidth: 1,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBorderColor: 'rgba(255,255,255,0.5)',
+                            pointBorderWidth: 1,
+                        },
+                        // Standard portfolios with larger markers
+                        {
+                            label: 'Conservative (40% stocks)',
+                            data: [{x: standardData.conservative.avg_probability, y: standardData.conservative.var_95_annual}],
+                            backgroundColor: '#388e3c',
+                            borderColor: '#1b5e20',
+                            borderWidth: 3,
+                            pointRadius: 12,
+                            pointHoverRadius: 15,
+                            pointStyle: 'circle',
+                        },
+                        {
+                            label: 'Balanced (60% stocks)',
+                            data: [{x: standardData.balanced.avg_probability, y: standardData.balanced.var_95_annual}],
+                            backgroundColor: '#f57c00',
+                            borderColor: '#e65100',
+                            borderWidth: 3,
+                            pointRadius: 12,
+                            pointHoverRadius: 15,
+                            pointStyle: 'circle',
+                        },
+                        {
+                            label: 'Aggressive (80% stocks)',
+                            data: [{x: standardData.aggressive.avg_probability, y: standardData.aggressive.var_95_annual}],
+                            backgroundColor: '#d32f2f',
+                            borderColor: '#b71c1c',
+                            borderWidth: 3,
+                            pointRadius: 12,
+                            pointHoverRadius: 15,
+                            pointStyle: 'circle',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const x = context.parsed.x.toFixed(1);
+                                    const y = context.parsed.y.toFixed(2);
+                                    return `${label}: Probability=${x}% | VaR=${y}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            min: 60,
+                            max: 100,
+                            ticks: {
+                                callback: v => v + '%'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Cumulative Probability (Avg across return thresholds)',
+                                font: {size: 14, weight: 600}
+                            }
+                        },
+                        y: {
+                            min: -8,
+                            max: 2,
+                            ticks: {
+                                callback: v => v + '%'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Annualized VaR at 95% Confidence',
+                                font: {size: 14, weight: 600}
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Fill statistics table
+            const tbody = document.getElementById('stats-table');
+            Object.keys(standardData).forEach(key => {
+                const p = standardData[key];
+                if (p) {
+                    const row = `<tr>
+                        <td>${p.marker_type.charAt(0).toUpperCase() + p.marker_type.slice(1)}</td>
+                        <td>${p.var_95_annual.toFixed(2)}%</td>
+                        <td>${p.avg_probability.toFixed(1)}%</td>
+                        <td>${p.expected_return.toFixed(2)}%</td>
+                    </tr>`;
+                    tbody.insertAdjacentHTML('beforeend', row);
+                }
+            });
+
+            // Create threshold decay chart
+            const thresholdCtx = document.getElementById('threshold-chart').getContext('2d');
+
+            new Chart(thresholdCtx, {
+                type: 'line',
+                data: {
+                    labels: ['0%', '5%', '10%', '15%', '20%', '30%'],
+                    datasets: [
+                        {
+                            label: 'Conservative',
+                            data: Object.values(standardData.conservative.prob_by_threshold),
+                            borderColor: '#388e3c',
+                            backgroundColor: 'rgba(56, 142, 60, 0.1)',
+                            borderWidth: 3,
+                            pointRadius: 7,
+                            pointBackgroundColor: '#388e3c',
+                            tension: 0.3,
+                            fill: true,
+                        },
+                        {
+                            label: 'Balanced',
+                            data: Object.values(standardData.balanced.prob_by_threshold),
+                            borderColor: '#f57c00',
+                            backgroundColor: 'rgba(245, 124, 0, 0.1)',
+                            borderWidth: 3,
+                            pointRadius: 7,
+                            pointBackgroundColor: '#f57c00',
+                            tension: 0.3,
+                            fill: true,
+                        },
+                        {
+                            label: 'Aggressive',
+                            data: Object.values(standardData.aggressive.prob_by_threshold),
+                            borderColor: '#d32f2f',
+                            backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                            borderWidth: 3,
+                            pointRadius: 7,
+                            pointBackgroundColor: '#d32f2f',
+                            tension: 0.3,
+                            fill: true,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {display: true, position: 'top'},
+                    },
+                    scales: {
+                        y: {
+                            min: 60,
+                            max: 100,
+                            ticks: {
+                                callback: v => v + '%'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Probability of Exceeding Return Target'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Return Threshold (5-Year Cumulative)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
