@@ -52,3 +52,11 @@ print(f"\nSummary Statistics:")
 print(f"  VaR 95% Annual - Min: {df['VaR_95_Annual'].min()*100:.2f}%, Max: {df['VaR_95_Annual'].max()*100:.2f}%")
 print(f"  Prob(Return > {return_target*100:.0f}%) - Min: {df['Prob_Exceed_Target'].min()*100:.1f}%, Max: {df['Prob_Exceed_Target'].max()*100:.1f}%")
 print(f"  Expected Annual Return - Min: {df['Expected_Return_Annual'].min()*100:.2f}%, Max: {df['Expected_Return_Annual'].max()*100:.2f}%")
+
+# Print PDF statistics
+if 'statistics' in data:
+    stats = data['statistics']
+    print(f"\nProbability Distribution Statistics:")
+    print(f"  Mean: {stats['mean']*100:.1f}%")
+    print(f"  Median: {stats['median']*100:.1f}%")
+    print(f"  Std Dev: {stats['std_dev']*100:.1f}%")
