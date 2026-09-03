@@ -65,7 +65,7 @@ for p_idx in range(N_PORTFOLIOS):
 
     # VaR at 95% (5th percentile of returns)
     var_95_5yr = np.percentile(final_returns, 5)
-    var_95_annual = var_95_5yr / np.sqrt(N_YEARS)
+    var_95_annual = (1 + var_95_5yr) ** (1 / N_YEARS) - 1
 
     # Probability of beating return target (80%)
     prob_exceed_target = np.mean(final_returns > RETURN_TARGET)
@@ -118,7 +118,7 @@ for name, w_dict in standard_configs.items():
     final_returns = cumulative_returns - 1
 
     var_95_5yr = np.percentile(final_returns, 5)
-    var_95_annual = var_95_5yr / np.sqrt(N_YEARS)
+    var_95_annual = (1 + var_95_5yr) ** (1 / N_YEARS) - 1
     prob_exceed_target = np.mean(final_returns > RETURN_TARGET)
 
     port_return = np.sum(w * returns)

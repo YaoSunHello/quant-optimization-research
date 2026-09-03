@@ -16,6 +16,70 @@ This package provides a **complete statistical analysis of the relationship betw
 
 ## File Guide
 
+### Efficient Frontier Analysis (NEW)
+
+#### `frontier_80pct_fast.py`
+**Purpose**: Fast efficient frontier simulation with 80% return target threshold
+
+**What it does**:
+- Generates 500 random portfolios with optimal weight distribution
+- Runs 1,000 Monte Carlo simulations per portfolio (5-year horizon)
+- Calculates VaR at 95% confidence level
+- Measures probability of achieving 80% cumulative 5-year return
+- Filters to show only portfolios with 50% < probability < 99%
+- Generates interactive efficient frontier visualization
+
+**How to run**:
+```bash
+python3 frontier_80pct_fast.py
+```
+
+**Output**:
+- `efficient_frontier_data.json`: Portfolio data with VaR and probability metrics
+- Console: Summary statistics and portfolio distribution
+
+**Time to complete**: ~60-90 seconds (optimized for speed)
+
+---
+
+#### `frontier_80pct_optimized.py`
+**Purpose**: Balanced efficient frontier with more precision
+
+**What it does**:
+- Generates 1,000 random portfolios
+- Runs 3,000 simulations per portfolio (5-year horizon)
+- Same filtering: 50% < P(80% return) < 99%
+- Higher statistical precision than fast version
+
+**How to run**:
+```bash
+python3 frontier_80pct_optimized.py
+```
+
+**Time to complete**: ~3-5 minutes
+
+---
+
+#### `frontier_single_target.py`
+**Purpose**: Unified frontier framework with configurable return targets
+
+**Features**:
+- Updated to use 80% return target (previously 60%)
+- 2,000 portfolios with 5,000 simulations each (high precision)
+- Comprehensive analysis with standard portfolio benchmarks
+- Same 50%-99% probability filter
+
+**How to run**:
+```bash
+python3 frontier_single_target.py
+```
+
+**Time to complete**: ~8-12 minutes (requires computational resources)
+
+**To modify the return target**: Edit line 31 to change RETURN_TARGET value
+
+---
+
 ### 1. `portfolio_var_analysis.py`
 **Purpose**: Core statistical analysis and simulation engine
 
@@ -102,9 +166,11 @@ python3 portfolio_var_analysis.py
 
 ## Quick Start: Understanding the Results
 
-### The Core Finding
+### The Core Finding: VaR vs Return Threshold Probability
 
 **Thesis**: Value at Risk (VaR) at 95% confidence and probability of exceeding return thresholds follow a deep mathematical relationship rooted in the portfolio's complete return distribution.
+
+**New Analysis**: We've extended this analysis to examine the efficient frontier at an **80% cumulative 5-year return target**, filtering portfolios to show only those with **50% < probability of success < 99%**. This reveals which portfolio allocations provide the "sweet spot" between achieving ambitious goals and avoiding over-optimistic predictions.
 
 **Evidence**:
 | Portfolio | Annual Expected | Annualized VaR | P(Return > 0%) |
@@ -223,7 +289,47 @@ Empirical percentiles match theoretical normal distribution:
 
 ## Advanced Usage
 
-### Modifying the Simulation
+### Working with Efficient Frontier Analysis
+
+#### Changing the Return Target
+
+Edit the efficient frontier scripts to analyze different return thresholds:
+
+**In frontier_80pct_fast.py or frontier_80pct_optimized.py** (line 36):
+```python
+RETURN_TARGET = 0.80  # Change to desired target (e.g., 0.60 for 60%, 1.00 for 100%)
+```
+
+#### Understanding the Probability Filter
+
+The scripts filter portfolios to show only those with **50% < P(return > target) < 99%**:
+- **Below 50%**: Portfolios with very low probability of success (not recommended)
+- **Above 99%**: Portfolios so conservative they likely miss the target (unrealistic)
+- **50%-99% range**: The realistic, actionable "efficient frontier" of portfolio choices
+
+To modify the filter, edit lines in the respective script:
+```python
+if 0.50 < p['prob_exceed_target'] < 0.99:  # Adjust these thresholds
+    filtered_portfolios.append(p)
+```
+
+#### Adjusting Simulation Parameters
+
+For faster results with less precision:
+```python
+N_PORTFOLIOS = 300      # Fewer portfolios = faster
+N_SIMS = 500            # Fewer simulations = faster (but noisier)
+```
+
+For more precise results:
+```python
+N_PORTFOLIOS = 2000     # More portfolios = better frontier coverage
+N_SIMS = 5000           # More simulations = smoother estimates
+```
+
+---
+
+### Modifying the Core VaR Simulation
 
 Edit `portfolio_var_analysis.py` to change:
 
@@ -275,24 +381,33 @@ with open('viz_data.json') as f:
 
 ## Recommended Reading Order
 
-1. **Start here**: Open `portfolio_var_dashboard.html` in browser
-   - Get visual intuition of Monte Carlo paths
-   - See return distributions and key metrics
+1. **Start here**: Run the efficient frontier simulations
+   ```bash
+   python3 frontier_80pct_fast.py  # ~90 seconds
+   ```
+   - Generates the efficient frontier at 80% target
+   - Shows which portfolio allocations are realistic (50%-99% probability)
+   - Understand your optimal risk-return tradeoff
 
-2. **Then read**: Executive Summary + Section 6-7 of `VaR_ANALYSIS_REPORT.md`
-   - Understand the mathematical relationship
-   - See practical applications
+2. **Visualize**: Open `efficient_frontier_dashboard.html` in browser
+   - Interactive scatter plot of VaR vs probability
+   - See how different portfolio weights affect outcomes
+   - Identify your preferred portfolio
 
-3. **Deep dive**: Full `VaR_ANALYSIS_REPORT.md` if interested in:
-   - Academic foundations (Section 2)
-   - Data sources and calibration (Section 3)
-   - Complete methodology (Section 4-5)
-   - Limitations and sensitivity (Section 8)
+3. **Understand the theory**: Read `VaR_ANALYSIS_REPORT.md` 
+   - Executive Summary: Key findings
+   - Section 1-2: Theoretical foundations + data sources
+   - Section 5-7: Mathematical relationships and practical applications
 
-4. **Reference**: Use as:
-   - Guide for your own portfolio decisions
-   - Template for similar analyses
-   - Educational material on Monte Carlo and risk metrics
+4. **Full details**: `portfolio_var_dashboard.html` for comprehensive analysis
+   - Monte Carlo simulation paths for selected portfolios
+   - Return distributions and tail metrics
+   - Risk-return tradeoffs across different allocations
+
+5. **Reference**: Use resources for:
+   - Portfolio decision-making
+   - Understanding different return targets
+   - Template for custom analyses
 
 ---
 
@@ -331,6 +446,24 @@ A:
 - **CVaR(95%)** = average of worst 5% ("if disaster strikes, how bad on average?")
 - CVaR is ~2× worse than VaR because it captures the true tail risk
 
+**Q: Why filter portfolios to 50%-99% probability?**
+A: This range captures the "realistic frontier":
+- **Below 50%**: Portfolios too risky/uncertain to achieve your goal reliably
+- **50%-99%**: The actionable range where most investors make decisions
+- **Above 99%**: So conservative they likely miss the goal (defeating the purpose)
+
+**Q: Can I change the 80% return target?**
+A: Yes! Edit the efficient frontier scripts:
+- In `frontier_80pct_fast.py`, change line 36: `RETURN_TARGET = 0.80` to your desired target
+- Rerun the script to generate a new frontier
+- This shows probabilities for YOUR specific financial goal
+
+**Q: What if my laptop is slow? Which script should I use?**
+A: 
+- **Fast**: `frontier_80pct_fast.py` (500 portfolios, 1000 sims) → ~90 seconds
+- **Balanced**: `frontier_80pct_optimized.py` (1000 portfolios, 3000 sims) → ~5 minutes
+- **Comprehensive**: `frontier_single_target.py` (2000 portfolios, 5000 sims) → ~12 minutes
+
 ---
 
 ## Contact & Support
@@ -348,24 +481,42 @@ For questions or modifications, refer to:
 
 ---
 
-**Generated**: September 2, 2026
+**Generated**: September 2, 2026 (Updated September 3, 2026 with 80% efficient frontier)
 **Citation**: "Multi-Asset Portfolio VaR Analysis: Relationship Between Risk Metrics and Return Thresholds" (2026)
 
 ---
 
 ## Summary
 
-This complete analysis package answers the fundamental question: **How does Value at Risk relate to the probability of exceeding return targets?**
+This complete analysis package answers two fundamental questions:
 
-**The answer**: Through the lens of normal distribution theory, VaR and return probabilities are two sides of the same coin—the portfolio's mean return and volatility. Higher VaR (less negative = lower downside risk) is strongly correlated with higher probability of exceeding positive return thresholds, especially for conservative portfolios. However, aggressive portfolios with negative VaR can still offer excellent return probabilities due to their much higher expected returns.
+1. **How does Value at Risk relate to the probability of exceeding return targets?**
+   - Answer: Through normal distribution theory, VaR and return probabilities are two sides of the same coin—the portfolio's mean return and volatility.
 
-**The practical takeaway**: Don't focus on VaR alone. Instead, examine:
+2. **Which portfolio allocations can realistically achieve an 80% 5-year return target?**
+   - Answer: The efficient frontier simulations reveal portfolios with 50%-99% probability of success, filtering out unrealistic extremes and showing the "actionable frontier" for investor decision-making.
+
+**Key insights**:
+- Higher VaR (less negative = lower downside risk) is strongly correlated with higher probability of exceeding return thresholds
+- Aggressive portfolios with negative VaR can still offer excellent return probabilities due to higher expected returns
+- The 50%-99% probability range defines the realistic set of portfolio choices
+- Your choice should reflect your specific return goal, time horizon, and risk tolerance
+
+**The practical approach**: 
+1. Define your return target (e.g., 80% over 5 years)
+2. Run the efficient frontier simulation: `python3 frontier_80pct_fast.py`
+3. Examine portfolios in the 50%-99% probability range
+4. Select based on your risk tolerance and other constraints
+5. Implement with regular monitoring and rebalancing
+
+**The integrated view** considers:
 1. Expected return (mean)
 2. Return volatility (standard deviation)  
-3. Probability of achieving your financial goals
+3. **Probability of achieving YOUR specific financial goal**
 4. Maximum drawdown (intra-period pain)
 5. Tail risk (CVaR)
+6. Correlation benefits and diversification
 
-This integrated view enables better portfolio decisions than single-metric analysis.
+This integrated framework enables better portfolio decisions than single-metric analysis.
 
 Enjoy the analysis! 📊
